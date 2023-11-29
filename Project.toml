@@ -4,7 +4,7 @@ authors = ["Daniel Rivero"]
 version = "1.0.0"
 
 [deps]
-JLD2 = "0.4.36"
+JLD2 = "0.4.38"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
