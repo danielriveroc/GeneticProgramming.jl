@@ -28,7 +28,7 @@ function fitnessFunction(genotype)
     return mean(abs.(outputs.-targets));
 end
 
-# Set some hyperpatameters
+# Set some hyperparameters
 gp.maximumHeight = 5;
 gp.maximumInitialHeight = 5;
 gp.populationSize = 100;
