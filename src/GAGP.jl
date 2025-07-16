@@ -34,14 +34,34 @@ end
 GP(fitnessFunction::Function, minimize::Bool; type::Type=Any) =                                     GAGP(false, fitnessFunction, minimize; type=type)
 GA(fitnessFunction::Function, minimize::Bool, genLimits::Tuple{Float64,Float64}, genLength::Int)  = GAGP(true,  fitnessFunction, minimize; genLimits=genLimits, genLength=UInt(genLength))
 
+function addPrototype!(obj::GAGP, name::String, type::Type, evalFunction::Function)
+    @assert(!obj.isGA);
+    addPrototype!(obj.prototypes, TerminalFunction(name, evalFunction; type=type));
+end
+addPrototype!(obj::GAGP, name::String, evalFunction::Function) = addPrototype!(obj, name, Any, evalFunction);
+
+
 function addPrototype!(obj::GAGP, name::String, type::Type, evalFunction::Function, childrenType::Vector{DataType})
-        @assert(!obj.isGA);
-    if (length(childrenType)==2)
+    @assert(!obj.isGA);
+    if isempty(childrenType)
+        addPrototype!(obj, name, type, evalFunction);
+    elseif (length(childrenType)==2)
         addPrototype!(obj.prototypes, BinaryNode(name, evalFunction; type=type, typeChild1=childrenType[1], typeChild2=childrenType[2]));
     else
         addPrototype!(obj.prototypes, NonBinaryNode(name, evalFunction, type, childrenType));
     end;
 end
+
+# function addPrototype!(obj::GAGP, name::String, type::Type, evalFunction::Function, childrenType::Vector{DataType})
+#     @assert(!obj.isGA);
+#     if isempty(childrenType)
+#         addPrototype!(obj, name, type, evalFunction);
+#     elseif (length(childrenType)==2)
+#         addPrototype!(obj.prototypes, BinaryNode(name, evalFunction; type=type, typeChild1=childrenType[1], typeChild2=childrenType[2]));
+#     else
+#         addPrototype!(obj.prototypes, NonBinaryNode(name, evalFunction, type, childrenType));
+#     end;
+# end
 
 function addPrototype!(obj::GAGP, nombre::String, numChildren::Int64, evalFunction::Function)
     @assert(!obj.isGA);
@@ -78,6 +98,11 @@ end
 function addPrototype!(obj::GAGP, lowerLimit::Float64, upperLimit::Float64; type::DataType=Any)
     @assert(!obj.isGA);
     addPrototype!(obj.prototypes, RandomConstant(lowerLimit, upperLimit; type=type));
+end
+
+function addPrototype!(obj::GAGP, value::Real; type::DataType=Any)
+    @assert(!obj.isGA);
+    addPrototype!(obj.prototypes, Constant(value; type=type));
 end
 
 
@@ -118,7 +143,7 @@ end
 evaluatePopulation(obj::GAGP) = EvaluateIndividuals(obj, length(obj.population));
 
 
-function sortPopulation(obj::GAGP)
+function SortPopulation(obj::GAGP)
     fitness = [ind.fitness for ind in obj.population]
     issorted(fitness, rev=!obj.minimize) && return;
     if (obj.minimize)
@@ -265,7 +290,7 @@ function Step!(obj::GAGP)
 
     end;
 
-    sortPopulation(obj);
+    SortPopulation(obj);
 
     if (length(obj.population)>obj.populationSize)
         obj.population = obj.population(1:obj.populationSize);
@@ -323,9 +348,9 @@ function FillPopulation(obj::GAGP)
     else
         newPopulation = CreationAlg(obj.type, obj.populationSize - numIndividuals, obj.maximumInitialHeight, obj.maxNumNodes, obj.prototypes, obj.fitnessFunction);
     end;
-    if (newPopulation!=nothing)
+    if !isnothing(newPopulation)
         obj.population = vcat(obj.population, newPopulation);
-        sortPopulation(obj);
+        SortPopulation(obj);
     end;
     return nothing;
 end
@@ -390,8 +415,8 @@ function ResetearValoresEvaluacion(obj::GAGP)
     end;
 end;
 
-EvaluateIndividual(obj::GAGP, tree::Tree) = evaluateTree(tree);
-EvaluateIndividual(obj::GAGP, individual::Individual) = evaluateTree(obj, individual.tree);
+EvaluateIndividual(obj::GAGP, tree::Tree) = ( clearEvaluationValues!(tree); evaluateTree(tree); );
+EvaluateIndividual(obj::GAGP, individual::Individual) = EvaluateIndividual(obj, individual.genotype);
 
 BestIndividual(obj::GAGP) = obj.population[1];
 

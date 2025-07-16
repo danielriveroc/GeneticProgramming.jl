@@ -29,8 +29,8 @@ end
 
 mutable struct Constant <: Terminal
     @addNodeFields
-    semantic::Float64
-    Constant(value::Float64; type=Any) = new(type, value)
+    semantic::Real
+    Constant(value::Real; type=Any) = new(type, value)
 end
 
 mutable struct RandomConstant <: Terminal
@@ -38,6 +38,13 @@ mutable struct RandomConstant <: Terminal
     lowerLimit::Float64
     upperLimit::Float64
     RandomConstant(lowerLimit::Float64, upperLimit::Float64; type=Any) = new(type, lowerLimit, upperLimit)
+end
+
+mutable struct TerminalFunction <: Terminal
+    @addNodeFields
+    name::String
+    evalFunction::Function
+    TerminalFunction(name::String, evalFunction::Function; type=Any) = new(type, name, evalFunction)
 end
 
 
@@ -147,6 +154,7 @@ clearEvaluationValues!(node::Constant) = nothing;
 # clearEvaluationValues!(node::Constant, path::Array{Int,1}) = nothing;
 clearEvaluationValues!(node::RandomConstant) = error("");
 clearEvaluationValues!(node::Variable) = nothing;
+clearEvaluationValues!(node::TerminalFunction) = nothing;
 # clearEvaluationValues!(node::Variable, path::Array{Int,1}) = nothing;
 function clearEvaluationValues!(node::BinaryNode)
     node.semantic = nothing;
@@ -192,6 +200,7 @@ import Base.string
 string(node::Constant) = node.semantic>=0 ? string(node.semantic) : string("(",node.semantic,")");
 string(node::RandomConstant) = error("");
 string(node::Variable) = string("X", node.variableNumber);
+string(node::TerminalFunction) = string(node.name, "()");
 string(node::BinaryNode) = string("(",string(node.child1),node.name,string(node.child2),")")
 function string(node::NonBinaryNode)
     if (length(node.children)==2)
@@ -214,14 +223,15 @@ end;
 
 evaluateTree(tree::RandomConstant) = error("");
 evaluateTree(tree::Terminal) = tree.semantic;
+evaluateTree(tree::TerminalFunction) = tree.evalFunction();
 function evaluateTree(tree::BinaryNode)
-    if (tree.semantic==nothing)
+    if isnothing(tree.semantic)
         tree.semantic = tree.evalFunction( evaluateTree(tree.child1), evaluateTree(tree.child2) );
     end;
     return tree.semantic;
 end;
 function evaluateTree(tree::NonBinaryNode)
-    if (tree.semantic==nothing)
+    if isnothing(tree.semantic)
         evaluationChildren = [evaluateTree(child) for child in tree.children];
         tree.semantic = tree.evalFunction( evaluationChildren... );
     end;
@@ -229,6 +239,7 @@ function evaluateTree(tree::NonBinaryNode)
 end;
 
 reevaluatePath(tree::Terminal, path::Array{Int64,1}, indexPath::Int64) = tree.semantic;
+reevaluatePath(tree::TerminalFunction, path::Array{Int64,1}, indexPath::Int64) = evaluateTree(tree);
 reevaluatePath(tree::RandomConstant, path::Array{Int64,1}, indexPath::Int64) = error("");
 function reevaluatePath(tree::BinaryNode, path::Array{Int64,1}, indexPath::Int64=1)
     if (indexPath>length(path))
@@ -269,12 +280,13 @@ numNodes(node::NonBinaryNode) = UInt(1 + sum([numNodes(child) for child in node.
 
 height(node::Terminal) = UInt(1);
 height(node::BinaryNode) = UInt(1) + max(height(node.child1), height(node.child2));
-height(node::NonBinaryNode) = UInt(1) + maximum([height(child) for child in node.children]);
+height(node::NonBinaryNode) = UInt(1) + (isempty(node.children) ? UInt(0) : maximum([height(child) for child in node.children]));
 
 clone(node::Nothing) = nothing;
 clone(node::Constant) = Constant(node.semantic; type=node.type);
 clone(node::RandomConstant) = Constant(rand()*(node.upperLimit-node.lowerLimit) + node.lowerLimit; type=node.type);
 clone(node::Variable) = Variable(node.variableNumber; semantic=node.semantic, type=node.type);
+clone(node::TerminalFunction) = TerminalFunction(node.name, node.evalFunction; type=node.type);
 # clone(node::BinaryNode) = BinaryNode(node.name, node.evalFunction, clone(node.child1), clone(node.child2); semantic=((node.semantic==nothing) ? node.semantic : copy(node.semantic)));
 # clone(node::NonBinaryNode) = NonBinaryNode(node.name, node.evalFunction, node.equationsFunction; semantic=((node.semantic==nothing) ? node.semantic : copy(node.semantic)), children=convert(Array{Tree,1},[clone(child) for child in node.children]));
 clone(node::BinaryNode) = BinaryNode(node.name, node.evalFunction, clone(node.child1), clone(node.child2); type=node.type, semantic=node.semantic, typeChild1=node.typeChild1, typeChild2=node.typeChild2);

@@ -1,7 +1,7 @@
 name = "GeneticProgramming"
 uuid = "ad102508-34d1-48cc-9d5a-825d0c17f2b5"
 authors = ["Daniel Rivero"]
-version = "1.0.0"
+version = "1.0.1"
 
 [deps]
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
