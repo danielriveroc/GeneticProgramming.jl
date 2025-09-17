@@ -201,7 +201,7 @@ string(node::Constant) = node.semantic>=0 ? string(node.semantic) : string("(",n
 string(node::RandomConstant) = error("");
 string(node::Variable) = string("X", node.variableNumber);
 string(node::TerminalFunction) = string(node.name, "()");
-string(node::BinaryNode) = string("(",string(node.child1),node.name,string(node.child2),")")
+string(node::BinaryNode) = string("(", node.name in ["+","-","*","%",">","<",">=","<=","==","!="] ? string(node.child1)*node.name*string(node.child2) : node.name*"("*string(node.child1)*","*string(node.child2)*")" ,")")
 function string(node::NonBinaryNode)
     if (length(node.children)==2)
         # text = string(node.name,"(",string(node.children[1]),",",string(node.children[2]),")")
